@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react';
 import { lotteryContract, web3 } from './services';
 
+const containerStyle = {
+  padding: '2rem',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+};
+
 export default function App() {
+  const [accounts, setAccounts] = useState([]);
+
   const [contractDetails, setContractDetails] = useState({
     manager: '',
     players: [],
@@ -15,8 +25,12 @@ export default function App() {
     color: '',
   });
 
-  const resetMsg = () => {
-    return setTimeout(() => {
+  const printMsg = (title, color, isStatic) => {
+    setMsg({ title, color });
+
+    if (isStatic) return;
+
+    setTimeout(() => {
       setMsg({ title: '', color: '' });
     }, 3000);
   };
@@ -24,28 +38,42 @@ export default function App() {
   const enterLottery = async (ev) => {
     ev.preventDefault();
 
+    printMsg('Submitting Transaction...', 'lightBlue', true);
+
     try {
-      const accounts = await web3.eth.getAccounts();
-
-      setMsg({ title: 'Submitting Transaction...', color: 'lightBlue' });
-
       await lotteryContract.methods.enter().send({
         from: accounts[0],
         value: web3.utils.toWei(enterFee, 'ether'),
       });
 
-      setMsg({ title: 'Transaction Passed', color: 'lightGreen' });
-
-      resetMsg();
+      printMsg('Transaction Passed', 'lightGreen');
     } catch (err) {
-      setMsg({ title: 'Sending Transaction Faild', color: 'pink' });
-      resetMsg();
+      console.log(err);
+      printMsg('Sending Transaction Faild', 'pink');
+    }
+  };
+
+  const pickAWinner = async () => {
+    setMsg({ title: 'Picking Winner...', color: 'lightBlue' });
+
+    try {
+      await lotteryContract.methods.pickWinner().send({
+        from: accounts[0],
+      });
+
+      printMsg('Winner is found', 'lightGreen');
+    } catch (err) {
+      console.log(err);
+      printMsg('Picking Winner Faild', 'pink');
     }
   };
 
   useEffect(() => {
     (async () => {
       try {
+        const accounts = await web3.eth.getAccounts();
+        setAccounts(accounts);
+
         const manager = await lotteryContract.methods.manager().call();
         const players = await lotteryContract.methods.getPlayers().call();
 
@@ -58,8 +86,7 @@ export default function App() {
         setContractDetails({ manager, players, balance: balanceInEther });
       } catch (err) {
         console.log(err);
-        resetMsg();
-        setMsg({ title: 'An error occurred during connection', color: 'pink' });
+        printMsg('An error occurred during connection', 'pink');
       }
     })();
   }, []);
@@ -92,11 +119,9 @@ export default function App() {
       <h1>Lottery</h1>
       <div
         style={{
+          ...containerStyle,
+          flexDirection: 'row',
           border: '2px dashed black',
-          padding: '2rem',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
         }}
       >
         <div style={{ marginRight: '1rem' }}>
@@ -111,16 +136,7 @@ export default function App() {
         <hr />
       </div>
 
-      <form
-        onSubmit={enterLottery}
-        style={{
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
+      <form onSubmit={enterLottery} style={containerStyle}>
         <h4>Amount of ether to send</h4>
         <div>
           <label style={{ marginRight: '8px' }}>Ether:</label>
@@ -137,6 +153,11 @@ export default function App() {
           <button>Enter to the lottery</button>
         </div>
       </form>
+
+      <div style={containerStyle}>
+        <h4>Amount of ether to send</h4>
+        <button onClick={() => pickAWinner()}>Pick A Winner</button>
+      </div>
     </div>
   );
 }
