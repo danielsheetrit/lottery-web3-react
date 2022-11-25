@@ -155,7 +155,7 @@ export default function App() {
       </form>
 
       <div style={containerStyle}>
-        <h4>Amount of ether to send</h4>
+        <h4>Click to pick a winner</h4>
         <button onClick={() => pickAWinner()}>Pick A Winner</button>
       </div>
     </div>
